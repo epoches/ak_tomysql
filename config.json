@@ -1,0 +1,12 @@
+{
+  "smtp_host": "smtpdm.aliyun.com",
+  "smtp_port": "80",
+  "email_username": "",
+  "email_password": "",
+  "to_username": "epoches@sohu.com",
+  "mysql_host": "",
+  "mysql_user": "",
+  "mysql_password": "",
+  "mysql_port": "",
+  "tmp_folder":"D:",
+}
