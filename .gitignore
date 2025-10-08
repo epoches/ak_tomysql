@@ -1,0 +1,7 @@
+# IDE 配置目录
+.idea/
+# Python 缓存目录
+__pycache__/
+_pychache/ # 如果这个目录确实存在且需要排除
+# Python 虚拟环境
+venv/
