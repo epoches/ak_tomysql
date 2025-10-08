@@ -21,18 +21,11 @@ def save_stock_board_concept_name_ths_df():
         column_types=stock_board_concept_name_ths_df_column_types
     )
 
-if __name__ == "__main__":
-
-
-    # stock_board_concept_info_ths_df = stock_board_concept_info_ths(
-    #     symbol="阿里巴巴概念"
-    # )
-    # print(stock_board_concept_info_ths_df)
-
+def save_stock_board_concept_index_ths_df(start_date="20250930",end_date="20250930"):
     stock_board_concept_name_ths_df = stock_board_concept_name_ths()
     for i in range(len(stock_board_concept_name_ths_df)):
         stock_board_concept_index_ths_df = stock_board_concept_index_ths(
-            symbol=stock_board_concept_name_ths_df['name'][i], start_date="20200101", end_date="20250930"
+            symbol=stock_board_concept_name_ths_df['name'][i], start_date=start_date, end_date=end_date
         )
         print(stock_board_concept_index_ths_df)
         stock_board_concept_index_ths_df = stock_board_concept_index_ths_df.rename(
@@ -50,7 +43,7 @@ if __name__ == "__main__":
         stock_board_concept_index_ths_df_column_types = {
             'code': String(50),  #
             'name': String(50),  #
-            'timestamp':DateTime,
+            'timestamp': DateTime,
             'open': Float,  # 浮点数
             'high': Float,  # 浮点数
             'low': Float,  # 浮点数
@@ -70,8 +63,18 @@ if __name__ == "__main__":
             df=stock_board_concept_index_ths_df,
             table_name='stock_board_concept_index_ths',
             id_column='code',
-            timestamp_column='date',
+            timestamp_column='timestamp',
             data_type='concept_index_ths',
             column_types=stock_board_concept_index_ths_df_column_types
         )
         time.sleep(1)
+
+if __name__ == "__main__":
+
+
+    # stock_board_concept_info_ths_df = stock_board_concept_info_ths(
+    #     symbol="阿里巴巴概念"
+    # )
+    # print(stock_board_concept_info_ths_df)
+
+    save_stock_board_concept_index_ths_df('2020-01-01','2025-09-30')
