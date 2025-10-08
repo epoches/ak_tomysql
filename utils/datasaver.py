@@ -239,13 +239,15 @@ class GenericDataSaver:
         }
         return word.lower() in reserved_words
 
-    def save_dataframe(self, df, id_column=None, timestamp_column=None):
+    def save_dataframe(self, df, id_column=None, timestamp_column=None, id_generator=None):
         """
         保存DataFrame到数据库
 
         :param df: 要保存的DataFrame
         :param id_column: 用作ID的列名，如果为None则自动生成
         :param timestamp_column: 时间戳列名，如果为None则不保存时间戳
+        :param id_generator: ID生成器函数，接收(row, index)参数，返回ID字符串
+                            例如：lambda row, idx: f"{row['code']}_{row['timestamp'].strftime('%Y%m%d')}"
         """
         if df is None or df.empty:
             logger.warning("DataFrame为空，跳过保存")
@@ -262,9 +264,21 @@ class GenericDataSaver:
                 'created_time': datetime.now()
             }
 
-            # 处理ID
-            if id_column and id_column in row:
-                data_dict['id'] = f"{self.table_name}_{row[id_column]}"
+            # 处理ID - 支持自定义ID生成器
+            if id_generator:
+                # 使用自定义ID生成器
+                data_dict['id'] = id_generator(row, index)
+            elif id_column and id_column in row:
+                if timestamp_column and timestamp_column in row:
+                    # 如果有时间戳列，组合code和timestamp作为ID
+                    timestamp_value = row[timestamp_column]
+                    if isinstance(timestamp_value, (datetime, pd.Timestamp)):
+                        timestamp_str = timestamp_value.strftime('%Y%m%d')
+                    else:
+                        timestamp_str = str(timestamp_value)
+                    data_dict['id'] = f"{self.table_name}_{row[id_column]}_{timestamp_str}"
+                else:
+                    data_dict['id'] = f"{self.table_name}_{row[id_column]}"
             else:
                 data_dict['id'] = f"{self.table_name}_{index}"
 
@@ -295,34 +309,42 @@ class GenericDataSaver:
         session = Session()
 
         try:
-            for data_dict in data_list:
-                # 处理MySQL保留字，给保留字列名添加反引号
-                safe_columns = []
-                for key in data_dict.keys():
-                    if self._is_mysql_reserved_word(key):
-                        safe_columns.append(f"`{key}`")
-                    else:
-                        safe_columns.append(key)
+            # 使用批量插入提高性能
+            chunk_size = 1000  # 每次插入1000条
+            for i in range(0, len(data_list), chunk_size):
+                chunk = data_list[i:i + chunk_size]
 
-                columns = ', '.join(safe_columns)
-                placeholders = ':' + ', :'.join(data_dict.keys())
+                # 构建插入语句
+                if chunk:
+                    first_dict = chunk[0]
+                    safe_columns = []
+                    for key in first_dict.keys():
+                        if self._is_mysql_reserved_word(key):
+                            safe_columns.append(f"`{key}`")
+                        else:
+                            safe_columns.append(key)
 
-                # 构建更新子句
-                update_parts = []
-                for key in data_dict.keys():
-                    if key != 'id':
-                        safe_key = f"`{key}`" if self._is_mysql_reserved_word(key) else key
-                        update_parts.append(f"{safe_key}=VALUES({safe_key})")
+                    columns = ', '.join(safe_columns)
+                    placeholders = ':' + ', :'.join(first_dict.keys())
 
-                update_clause = ', '.join(update_parts)
+                    # 构建更新子句
+                    update_parts = []
+                    for key in first_dict.keys():
+                        if key != 'id':
+                            safe_key = f"`{key}`" if self._is_mysql_reserved_word(key) else key
+                            update_parts.append(f"{safe_key}=VALUES({safe_key})")
 
-                stmt = text(f"""
-                    INSERT INTO `{self.table_name}` ({columns})
-                    VALUES ({placeholders})
-                    ON DUPLICATE KEY UPDATE {update_clause}
-                """)
+                    update_clause = ', '.join(update_parts)
 
-                session.execute(stmt, data_dict)
+                    stmt = text(f"""
+                        INSERT INTO `{self.table_name}` ({columns})
+                        VALUES ({placeholders})
+                        ON DUPLICATE KEY UPDATE {update_clause}
+                    """)
+
+                    # 批量执行
+                    for data_dict in chunk:
+                        session.execute(stmt, data_dict)
 
             session.commit()
             logger.info(f"成功保存 {len(data_list)} 条数据到表 {self.table_name}")
@@ -389,10 +411,10 @@ class DataManager:
         return self.savers[key]
 
     def save_dataframe(self, df, table_name, id_column=None, timestamp_column=None, data_type="generic",
-                       column_types=None):
+                       column_types=None, id_generator=None):
         """保存DataFrame到指定表"""
         saver = self.get_saver(table_name, data_type, column_types)
-        saver.save_dataframe(df, id_column, timestamp_column)
+        saver.save_dataframe(df, id_column, timestamp_column, id_generator)
 
 
 # 使用示例

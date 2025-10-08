@@ -3,6 +3,7 @@ from utils.datasaver import DataManager
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, Text, MetaData, Table, BigInteger, \
     Boolean, Date
 import time
+import pandas as pd
 
 def save_stock_board_concept_name_ths_df():
     stock_board_concept_name_ths_df = stock_board_concept_name_ths()
@@ -21,7 +22,9 @@ def save_stock_board_concept_name_ths_df():
         column_types=stock_board_concept_name_ths_df_column_types
     )
 
-def save_stock_board_concept_index_ths_df(start_date="20250930",end_date="20250930"):
+
+
+def save_stock_board_concept_index_ths_df(start_date="20250930", end_date="20250930"):
     stock_board_concept_name_ths_df = stock_board_concept_name_ths()
     for i in range(len(stock_board_concept_name_ths_df)):
         stock_board_concept_index_ths_df = stock_board_concept_index_ths(
@@ -39,34 +42,54 @@ def save_stock_board_concept_index_ths_df(start_date="20250930",end_date="202509
                 '成交额': 'turnover'
             }
         )
-        # 日期       开盘价       最高价  ...       收盘价          成交量           成交额
-        stock_board_concept_index_ths_df_column_types = {
-            'code': String(50),  #
-            'name': String(50),  #
-            'timestamp': DateTime,
-            'open': Float,  # 浮点数
-            'high': Float,  # 浮点数
-            'low': Float,  # 浮点数
-            'close': Float,  # 浮点数
-            'volume': Float,  # 浮点数
-            'turnover': Float,  # 浮点数
 
+        stock_board_concept_index_ths_df_column_types = {
+            'code': String(50),
+            'name': String(50),
+            'timestamp': DateTime,
+            'open': Float,
+            'high': Float,
+            'low': Float,
+            'close': Float,
+            'volume': Float,
+            'turnover': Float,
         }
+
         stock_board_concept_index_ths_df['code'] = stock_board_concept_name_ths_df['code'][i]
         stock_board_concept_index_ths_df['name'] = stock_board_concept_name_ths_df['name'][i]
+
         # 将code和name列移到最前面
         cols = stock_board_concept_index_ths_df.columns.tolist()
         cols = ['code', 'name'] + [col for col in cols if col not in ['code', 'name']]
         stock_board_concept_index_ths_df = stock_board_concept_index_ths_df[cols]
+
         data_manager = DataManager()
+
+        # 方法1: 使用自动ID生成（code + timestamp）
         data_manager.save_dataframe(
             df=stock_board_concept_index_ths_df,
             table_name='stock_board_concept_index_ths',
-            id_column='code',
+            id_column='code',  # 会自动与timestamp组合成唯一ID
             timestamp_column='timestamp',
             data_type='concept_index_ths',
             column_types=stock_board_concept_index_ths_df_column_types
         )
+
+        # # 方法2: 使用自定义ID生成器（更灵活）
+        # def custom_id_generator(row, index):
+        #     # 使用code和timestamp生成唯一ID
+        #     timestamp_str = row['timestamp'].strftime('%Y%m%d') if pd.notna(row['timestamp']) else 'nodate'
+        #     return f"{row['code']}_{timestamp_str}"
+        #
+        # data_manager.save_dataframe(
+        #     df=stock_board_concept_index_ths_df,
+        #     table_name='stock_board_concept_index_ths',
+        #     id_generator=custom_id_generator,  # 使用自定义ID生成器
+        #     timestamp_column='timestamp',
+        #     data_type='concept_index_ths',
+        #     column_types=stock_board_concept_index_ths_df_column_types
+        # )
+
         time.sleep(1)
 
 if __name__ == "__main__":
