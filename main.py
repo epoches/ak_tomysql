@@ -1,5 +1,5 @@
 # windows 计划任务每周一到周五执行即可
-from  stock_feature.stock_board_concept_ths import save_stock_board_concept_name_ths_df,save_stock_board_concept_index_ths_df
+from  stock_feature.stock_board_concept_ths import save_stock_board_concept_name_ths_df,save_stock_board_concept_index_ths_df,save_stock_board_concept_summary_ths_df
 from datetime import datetime
 import calendar
 
@@ -23,6 +23,9 @@ if __name__ == "__main__":
         save_stock_board_concept_name_ths_df()
     # 保存 同花顺概念日线数据
     save_stock_board_concept_index_ths_df(start_date,end_date)
+
+    # 保存 同花顺概念日期
+    save_stock_board_concept_summary_ths_df()
 
     # 陆续添加中
 

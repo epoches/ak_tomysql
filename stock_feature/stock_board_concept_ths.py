@@ -1,4 +1,4 @@
-from akshare.stock_feature.stock_board_concept_ths import stock_board_concept_name_ths,stock_board_concept_info_ths,stock_board_concept_index_ths
+from akshare.stock_feature.stock_board_concept_ths import stock_board_concept_name_ths,stock_board_concept_info_ths,stock_board_concept_index_ths,stock_board_concept_summary_ths
 from utils.datasaver import DataManager
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, Text, MetaData, Table, BigInteger, \
     Boolean, Date
@@ -6,6 +6,7 @@ import time
 import pandas as pd
 
 def save_stock_board_concept_name_ths_df():
+    #获取同花顺概念板块代码和名称字典并保存
     stock_board_concept_name_ths_df = stock_board_concept_name_ths()
     print(stock_board_concept_name_ths_df)
     stock_board_concept_name_ths_df_column_types = {
@@ -25,6 +26,12 @@ def save_stock_board_concept_name_ths_df():
 
 
 def save_stock_board_concept_index_ths_df(start_date="20250930", end_date="20250930"):
+    '''
+    同花顺-板块-概念板块-指数数据
+    :param start_date:
+    :param end_date:
+    :return:
+    '''
     stock_board_concept_name_ths_df = stock_board_concept_name_ths()
     for i in range(len(stock_board_concept_name_ths_df)):
         stock_board_concept_index_ths_df = stock_board_concept_index_ths(
@@ -92,6 +99,57 @@ def save_stock_board_concept_index_ths_df(start_date="20250930", end_date="20250
 
         time.sleep(1)
 
+def save_stock_board_concept_summary_ths_df():
+    '''
+    同花顺概念日期
+    :return:
+    '''
+    stock_board_concept_name_ths_df = stock_board_concept_name_ths()
+    #  日期          概念名称  驱动事件 龙头股 成分股数量
+    stock_board_concept_summary_ths_df = stock_board_concept_summary_ths()
+    print(stock_board_concept_summary_ths_df)
+    stock_board_concept_summary_ths_df = stock_board_concept_summary_ths_df.rename(
+        columns={
+            '日期': 'timestamp',
+            '概念名称': 'name',
+            '驱动事件': 'catalyst',
+            '龙头股': 'market_leader',
+            '成分股数量': 'num',
+        }
+    )
+
+    stock_board_concept_summary_ths_df_column_types = {
+        'code': String(50),
+        'name': String(250),
+        'timestamp': DateTime,
+        'catalyst': Text,
+        'market_leader':  String(250),
+        'num': Float,
+    }
+    stock_board_concept_summary_ths_df = stock_board_concept_summary_ths_df.merge(
+        stock_board_concept_name_ths_df[['name', 'code']],
+        on='name',
+        how='left'
+    )
+
+    # 将code和name列移到最前面
+    cols = stock_board_concept_summary_ths_df.columns.tolist()
+    cols = ['code','name'] + [col for col in cols if col not in ['code','name']]
+    stock_board_concept_summary_ths_df = stock_board_concept_summary_ths_df[cols]
+
+    data_manager = DataManager()
+
+    # 方法1: 使用自动ID生成（code + timestamp）
+    data_manager.save_dataframe(
+        df=stock_board_concept_summary_ths_df,
+        table_name='stock_board_concept_summary_ths',
+        id_column='code',  # 会自动与timestamp组合成唯一ID
+        timestamp_column='timestamp',
+        data_type='concept_summary_ths',
+        column_types=stock_board_concept_summary_ths_df_column_types
+    )
+
+
 if __name__ == "__main__":
 
 
@@ -100,4 +158,6 @@ if __name__ == "__main__":
     # )
     # print(stock_board_concept_info_ths_df)
 
-    save_stock_board_concept_index_ths_df('2020-01-01','2025-09-30')
+    # save_stock_board_concept_index_ths_df('2020-01-01','2025-09-30')
+
+    save_stock_board_concept_summary_ths_df()
