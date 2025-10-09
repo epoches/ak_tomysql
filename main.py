@@ -1,13 +1,16 @@
 # windows 计划任务每周一到周五执行即可
-from  stock_feature.stock_board_concept_ths import save_stock_board_concept_name_ths_df,save_stock_board_concept_index_ths_df,save_stock_board_concept_summary_ths_df
+from akshare.stock.stock_board_concept_em import stock_board_concept_name_em
+from stock_feature.stock_board_concept_ths import save_stock_board_concept_name_ths_df,save_stock_board_concept_index_ths_df,save_stock_board_concept_summary_ths_df
+from stock_feature.stock_board_concept_em import save_stock_board_concept_em_df,save_stock_board_concept_cons_em_df
 from datetime import datetime
 import calendar
+import time
 
 if __name__ == "__main__":
 
     start_date = datetime.now().strftime('%Y%m%d')
     end_date = datetime.now().strftime('%Y%m%d')
-    today = datetime.datetime.now()
+    today = datetime.now()
 
     print(f"当前日期：{end_date}")
 
@@ -21,12 +24,19 @@ if __name__ == "__main__":
     if today.day == last_day:
         print(f"月底最后一天：{end_date}")
         save_stock_board_concept_name_ths_df()
+        # 保存 同花顺概念日期
+        save_stock_board_concept_summary_ths_df()
+
     # 保存 同花顺概念日线数据
     save_stock_board_concept_index_ths_df(start_date,end_date)
 
-    # 保存 同花顺概念日期
-    save_stock_board_concept_summary_ths_df()
+
+
+    save_stock_board_concept_em_df()
+
+    stock_board_concept_em_df = stock_board_concept_name_em()
+    for code in  stock_board_concept_em_df['板块代码']:
+        save_stock_board_concept_cons_em_df(code)
+        time.sleep(3)
 
     # 陆续添加中
-
-
