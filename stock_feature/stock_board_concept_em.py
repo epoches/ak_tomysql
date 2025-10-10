@@ -3,15 +3,19 @@ from akshare.stock.stock_board_concept_em import stock_board_concept_name_em,sto
 from utils.datasaver import DataManager
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, Text, MetaData, Table, BigInteger, \
     Boolean, Date
-import time
+from utils.backup_restore_log import load_processed_codes, save_processed_code,clear_processed_codes
 from datetime import datetime
-import akshare as ak
+import time
+import logging
+logger = logging.getLogger(__name__)
+from utils.backup_restore_log import load_processed_codes, save_processed_code,clear_processed_codes
+from utils  import init_log
 
 # 设置代理
-proxies = {
-    "http": "http://your_proxy_ip:proxy_port",
-    "https": "http://your_proxy_ip:proxy_port",
-}
+# proxies = {
+#     "http": "http://your_proxy_ip:proxy_port",
+#     "https": "http://your_proxy_ip:proxy_port",
+# }
 
 # 在使用akshare函数时传递proxies参数
 # stock_board_concept_em_df = ak.stock_board_concept_em(proxies=proxies)
@@ -131,11 +135,67 @@ def save_stock_board_concept_cons_em_df(symbol="BK0655"):
 
 
 
+
+
+def process_save_stock_board_concept_cons_em_df():
+    # Initialize logging with the function name
+    init_log("process_stock_board_codes.log")
+
+    logger.info("Starting stock board code processing")
+
+    # Load previously processed codes
+    processed_codes = load_processed_codes()
+
+    # Get the DataFrame with board codes
+    try:
+        stock_board_concept_em_df = stock_board_concept_name_em()
+        logger.info("Successfully loaded stock_board_concept_em_df")
+    except Exception as e:
+        logger.error(f"Failed to load stock_board_concept_em_df: {e}")
+        raise
+
+    # Filter out already processed codes
+    remaining_codes = stock_board_concept_em_df[
+        ~stock_board_concept_em_df['板块代码'].isin(processed_codes)
+    ]['板块代码']
+
+    # Check if there are any codes to process
+    if remaining_codes.empty:
+        logger.info("No remaining codes to process")
+        clear_processed_codes()  # Clear the file if no codes remain
+        logger.info("Processed codes file cleared for next run")
+        return
+
+
+    # Process each remaining code
+    for code in remaining_codes:
+        try:
+            logger.info(f"Processing board code: {code}")
+            save_stock_board_concept_cons_em_df(code)
+            # Log the successful processing of the code
+            save_processed_code(code)
+            logger.info(f"Successfully processed board code: {code}")
+            time.sleep(10)  # Delay to avoid server overload
+        except Exception as e:
+            logger.error(f"Error processing board code {code}: {e}")
+            break  # Stop processing if server refuses connection
+            # Optionally, you could add a delay and retry logic here
+    # If the loop completes without breaking, all codes were processed
+    else:
+        logger.info("All board codes processed successfully")
+        clear_processed_codes()  # Clear the processed codes file
+        logger.info("Processed codes file cleared for next run")
+
+
+
 if __name__ == "__main__":
 
-    # save_stock_board_concept_em_df()
+    save_stock_board_concept_em_df()
 
-    stock_board_concept_em_df = stock_board_concept_name_em()
-    for code in  stock_board_concept_em_df['板块代码']:
-        save_stock_board_concept_cons_em_df(code)
-        time.sleep(3)
+
+    try:
+        process_save_stock_board_concept_cons_em_df()
+    except KeyboardInterrupt:
+        logging.getLogger().warning("Process interrupted by user")
+    except Exception as e:
+        logging.getLogger().error(f"Unexpected error: {e}")
